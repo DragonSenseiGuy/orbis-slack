@@ -1,0 +1,8 @@
+slack-bolt>=1.18
+slack-sdk>=3.27
+google-api-python-client>=2.120
+google-auth-httplib2>=0.2
+google-auth-oauthlib>=1.2
+apscheduler>=3.10
+python-dotenv>=1.0
+watchdog>=3.0

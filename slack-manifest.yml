@@ -1,0 +1,34 @@
+display_information:
+  name: Orbis
+  description: Personal calendar-based Slack status bot with per-event control
+  background_color: "#4A154B"
+
+features:
+  bot_user:
+    display_name: Orbis
+    always_online: false
+  slash_commands:
+    - command: /calstatus
+      url: https://unused.com  # Socket Mode ignores this URL
+      description: Manage your calendar-based Slack status
+      should_escape: false
+
+oauth_config:
+  scopes:
+    bot:
+      - chat:write
+      - commands
+      - im:history
+      - im:write
+    user:
+      - users.profile:write
+
+settings:
+  socket_mode_enabled: true
+  event_subscriptions:
+    bot_events:
+      - message.im
+  interactivity:
+    is_enabled: true
+    # Socket Mode ignores this URL
+    request_url: https://unused.com
