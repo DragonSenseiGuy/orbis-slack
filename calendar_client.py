@@ -19,39 +19,71 @@ from googleapiclient.errors import HttpError
 SCOPES = ['https://www.googleapis.com/auth/calendar.readonly']
 
 
+def _load_token_info() -> Optional[dict]:
+    """Load Google OAuth token from env var or file."""
+    token_json = os.getenv('GOOGLE_TOKEN_JSON')
+    if token_json:
+        return json.loads(token_json)
+    
+    token_file = os.getenv('GOOGLE_TOKEN_FILE', 'token.json')
+    if os.path.exists(token_file):
+        with open(token_file, 'r') as f:
+            return json.load(f)
+    return None
+
+
+def _load_client_config() -> Optional[dict]:
+    """Load Google OAuth client config from env var or file."""
+    creds_json = os.getenv('GOOGLE_CREDENTIALS_JSON')
+    if creds_json:
+        return json.loads(creds_json)
+    
+    credentials_file = os.getenv('GOOGLE_CREDENTIALS_FILE', 'credentials.json')
+    if os.path.exists(credentials_file):
+        with open(credentials_file, 'r') as f:
+            return json.load(f)
+    return None
+
+
+def _save_token(creds: Credentials) -> None:
+    """Save token to env-specified file (skipped when using env var)."""
+    if os.getenv('GOOGLE_TOKEN_JSON'):
+        return
+    token_file = os.getenv('GOOGLE_TOKEN_FILE', 'token.json')
+    with open(token_file, 'w') as f:
+        json.dump(json.loads(creds.to_json()), f)
+
+
 def get_credentials() -> Credentials:
     """
     Load or create credentials for Google Calendar API.
-    Uses token.json for stored tokens and credentials.json for OAuth client.
+    Supports GOOGLE_TOKEN_JSON and GOOGLE_CREDENTIALS_JSON env vars,
+    or falls back to token.json / credentials.json files.
     """
     creds = None
-    token_file = os.getenv('GOOGLE_TOKEN_FILE', 'token.json')
-    credentials_file = os.getenv('GOOGLE_CREDENTIALS_FILE', 'credentials.json')
-    
+
     # Load existing token if available
-    if os.path.exists(token_file):
-        with open(token_file, 'r') as f:
-            token_info = json.load(f)
-            creds = Credentials.from_authorized_user_info(token_info, SCOPES)
-    
+    token_info = _load_token_info()
+    if token_info:
+        creds = Credentials.from_authorized_user_info(token_info, SCOPES)
+
     # Refresh or create new credentials if needed
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
         else:
-            if not os.path.exists(credentials_file):
+            client_config = _load_client_config()
+            if not client_config:
                 raise FileNotFoundError(
-                    f"Google credentials file not found: {credentials_file}. "
-                    "Please download from Google Cloud Console and place in project root."
+                    "Google credentials not found. Set GOOGLE_CREDENTIALS_JSON env var "
+                    "or place credentials.json in the project root."
                 )
-            
-            flow = InstalledAppFlow.from_client_secrets_file(credentials_file, SCOPES)
+
+            flow = InstalledAppFlow.from_client_config(client_config, SCOPES)
             creds = flow.run_local_server(port=0)
-        
-        # Save token for future runs
-        with open(token_file, 'w') as f:
-            json.dump(json.loads(creds.to_json()), f)
-    
+
+        _save_token(creds)
+
     return creds
 
 
