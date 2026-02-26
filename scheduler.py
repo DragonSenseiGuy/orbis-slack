@@ -128,12 +128,14 @@ def start_scheduler():
     poll_interval = settings.get("global", {}).get("poll_interval_seconds", 60)
     _current_poll_interval = poll_interval
     
-    # Add job
+    # Add job (allow coalesce so missed runs don't pile up)
     scheduler.add_job(
         poll_and_update,
         trigger=IntervalTrigger(seconds=poll_interval),
         id='calendar_poll',
-        replace_existing=True
+        replace_existing=True,
+        misfire_grace_time=30,
+        coalesce=True,
     )
     
     scheduler.start()
